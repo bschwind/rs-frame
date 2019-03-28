@@ -1,0 +1,8 @@
+[package]
+name = "coach"
+version = "0.1.0"
+authors = ["Brian Schwind <brianmschwind@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rs-frame = { path = "../rs-frame" }

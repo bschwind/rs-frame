@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "rs-frame",
+    "coach",
+]
