@@ -1,4 +1,5 @@
 use rs_frame::{App, Controller, RouteParams};
+use rs_frame_macros::{Controller, route};
 
 #[derive(Default, Hash)]
 struct EnvironmentDetailController {
@@ -46,8 +47,86 @@ impl Controller for HomeController {
 	}
 }
 
+
+
+#[derive(Controller)]
+#[trigger(route("/environments"))]
+struct EnvListController {}
+
+#[derive(Controller)]
+#[trigger(route("/environments/:id"))]
+struct EnvDetailController {
+	#[hash]
+	id: String,
+}
+
+impl EnvDetailController {
+	const NAME: &'static str = "env_detail";
+}
+
+#[derive(Controller)]
+#[trigger(once)]
+struct UserBasicController;
+
+impl UserBasicController {
+	const NAME: &'static str = "user_basic";
+}
+
+
+
+
+#[route("/", "home")]
+struct HomeRoute;
+
+#[route("/login", "login")]
+#[derive(Debug)]
+struct LoginRoute;
+
+#[route("/users", "user_list")]
+struct UsersRoute;
+
+#[route("/environments", "env_list")]
+struct EnvironmentsRoute;
+
+#[route("/environments/new", "new_env")]
+struct NewEnvironmentRoute;
+
+#[route("/environments/:id/detail", "env_detail")]
+struct EnvironmentDetailRoute {
+	id: String,
+}
+
+#[route("/environments/:id/logs", "env_logs")]
+struct EnvironmentLogsRoute {
+	id: String,
+}
+
+#[route("/environments/:id/vars", "env_vars")]
+struct EnvironmentVarsRoute {
+	id: String,
+}
+
+
+
+
+
+
+
+
+
+
+
 fn main() {
     // let controllers: Vec<Box<dyn Controller>> = vec!(Box::new(EnvironmentDetailController::default()), Box::new(HomeController));
+
+    println!("EnvDetailController name: {}", EnvDetailController::NAME);
+    println!("UserBasicController name: {}", UserBasicController::NAME);
+
+    println!("dfssadfd name: {:?}", LoginRoute {});
+
+    let stuff = EnvDetailController {
+        id: "".to_string(),
+    };
 
     let mut app = App::new();
     app.add_controller(EnvironmentDetailController::default());

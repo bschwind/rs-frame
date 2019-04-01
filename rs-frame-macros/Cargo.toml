@@ -1,9 +1,11 @@
 [package]
-name = "coach"
+name = "rs-frame-macros"
 version = "0.1.0"
 authors = ["Brian Schwind <brianmschwind@gmail.com>"]
 edition = "2018"
 
+[lib]
+proc-macro = true
+
 [dependencies]
-rs-frame = { path = "../rs-frame" }
-rs-frame-macros = { path = "../rs-frame-macros" }
+syn = { version = "0.15", features = ["extra-traits"] }
