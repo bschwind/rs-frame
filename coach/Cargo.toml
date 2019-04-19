@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 rs-frame = { path = "../rs-frame" }
 rs-frame-macros = { path = "../rs-frame-macros" }
+regex = "1.1.6"
