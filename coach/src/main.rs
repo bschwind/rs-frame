@@ -1,6 +1,6 @@
 use regex::Regex;
-use rs_frame::{App, Controller, RouteParams};
-use rs_frame_macros::{route, AppPath};
+use rs_frame::{AppPath, App, Controller, RouteParams};
+use rs_frame_macros::AppPath;
 
 #[derive(Default, Hash)]
 struct EnvironmentDetailController {
@@ -67,17 +67,6 @@ pub struct SomeOtherQuery {
     include_all: bool,
 }
 
-pub trait AppPath {
-    fn path_pattern() -> String
-    where
-        Self: Sized;
-    fn from_str(app_path: &str) -> Option<Self>
-    where
-        Self: Sized;
-    fn query_string(&self) -> Option<String>;
-    fn to_string(&self) -> String;
-}
-
 #[derive(Debug)]
 pub enum SortDirection {
     Asc,
@@ -85,25 +74,25 @@ pub enum SortDirection {
 }
 
 // #[route("/emails/{email_id}?{query}", "email_detail")]
-#[derive(AppPath)]
+// #[derive(AppPath)]
 // #[path("/emails/{email_id}")]
 // /p/{project_id}/exams/active?column=updated_at&direction=desc&keyword=test
-#[path("/p/{project_id}/exams/active")]
+// #[path("/p/{project_id}/exams/active")]
 struct ExamListPath {
     project_id: String,
 
-    #[query]
+    // #[query]
     column: Option<String>,
 
-    #[query]
+    // #[query]
     direction: Option<SortDirection>,
 
-    #[query]
+    // #[query]
     keyword: Option<String>,
 }
 
-#[derive(AppPath)]
-#[path("/settings/account/profile")]
+// #[derive(AppPath)]
+// #[path("/settings/account/profile")]
 struct SelfProfilePath {}
 
 #[derive(AppPath, Debug)]
@@ -123,37 +112,37 @@ struct ExpiredSubmissionsPath {
     keyword: Option<String>,
 }
 
-impl AppPath for ExpiredSubmissionsPath {
-    fn path_pattern() -> String {
-        r"^/p/(?P<project_id>[^/]+)/exams/(?P<exam_id>[^/]+)/submissions_expired$".to_string()
-    }
+// impl AppPath for ExpiredSubmissionsPath {
+//     fn path_pattern() -> String {
+//         r"^/p/(?P<project_id>[^/]+)/exams/(?P<exam_id>[^/]+)/submissions_expired$".to_string()
+//     }
 
-    fn from_str(app_path: &str) -> Option<Self> {
-        let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
-        let captures = path_pattern.captures(app_path)?;
+//     fn from_str(app_path: &str) -> Option<Self> {
+//         let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
+//         let captures = path_pattern.captures(app_path)?;
 
-        // TODO - get query string
+//         // TODO - get query string
 
-        Some(ExpiredSubmissionsPath {
-            project_id: captures["project_id"].parse().ok()?,
-            exam_id: captures["exam_id"].parse().ok()?,
-            column: None,
-            direction: None,
-            keyword: None,
-        })
-    }
+//         Some(ExpiredSubmissionsPath {
+//             project_id: captures["project_id"].parse().ok()?,
+//             exam_id: captures["exam_id"].parse().ok()?,
+//             column: None,
+//             direction: None,
+//             keyword: None,
+//         })
+//     }
 
-    fn query_string(&self) -> Option<String> {
-        None
-    }
+//     fn query_string(&self) -> Option<String> {
+//         None
+//     }
 
-    fn to_string(&self) -> String {
-        format!(
-            "/p/{}/exams/{}/submissions_expired",
-            self.project_id, self.exam_id
-        )
-    }
-}
+//     fn to_string(&self) -> String {
+//         format!(
+//             "/p/{}/exams/{}/submissions_expired",
+//             self.project_id, self.exam_id
+//         )
+//     }
+// }
 
 #[derive(Debug)]
 pub struct MyQuery {

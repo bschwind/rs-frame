@@ -1,3 +1,5 @@
+#![recursion_limit="128"]
+
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
@@ -6,7 +8,7 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput};
 
 // #[proc_macro]
 // pub fn example_macro_fn(_: TokenStream) -> TokenStream {
-// 	"struct Stuff;".parse().unwrap()
+//  "struct Stuff;".parse().unwrap()
 // }
 
 #[derive(Debug, PartialEq)]
@@ -133,45 +135,84 @@ fn test_path_to_regex_invalid_ending() {
     assert_eq!(regex, Err(PathToRegexError::InvalidTrailingSlash));
 }
 
+fn get_string_attr(name: &str, attrs: &Vec<syn::Attribute>) -> Option<String> {
+    for attr in attrs {
+        let attr = attr.parse_meta();
+
+        if let Ok(syn::Meta::List(ref list)) = attr {
+            if list.ident == name {
+                for thing in &list.nested {
+                    if let syn::NestedMeta::Literal(syn::Lit::Str(str_lit)) = thing {
+                        return Some(str_lit.value());
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 #[proc_macro_derive(AppPath, attributes(path, query))]
 pub fn app_path_derive(input: TokenStream) -> TokenStream {
     println!("AppPath Struct:");
 
-    // let args = input.clone();
-    // let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as DeriveInput);
 
-    for attr in &input.attrs {
-        println!("attrs: {:#?}", attr);
+    let name = &input.ident;
+    let generics = input.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let path_string = get_string_attr("path", &input.attrs);
+
+    if let Some(ref url_path) = path_string {
+        println!("We see a path defined as {}", url_path);
+    } else {
+        panic!("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct")
     }
 
+    let url_path = path_string.unwrap();
+
+    let path_regex = path_to_regex(&url_path).unwrap();
+
+    println!("Regex for {} is {}", name, path_regex);
+
+    let expanded = quote! {
+        impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
+            fn path_pattern() -> String {
+                // r"^/p/(?P<project_id>[^/]+)/exams/(?P<exam_id>[^/]+)/submissions_expired$".to_string()
+                #path_regex.to_string()
+            }
+
+            fn from_str(app_path: &str) -> Option<Self> {
+                let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
+                let captures = path_pattern.captures(app_path)?;
+
+                // TODO - get query string
+
+                Some(ExpiredSubmissionsPath {
+                    project_id: captures["project_id"].parse().ok()?,
+                    exam_id: captures["exam_id"].parse().ok()?,
+                    column: None,
+                    direction: None,
+                    keyword: None,
+                })
+            }
+
+            fn query_string(&self) -> Option<String> {
+                None
+            }
+
+            fn to_string(&self) -> String {
+                format!(
+                    "/p/{}/exams/{}/submissions_expired",
+                    self.project_id, self.exam_id
+                )
+            }
+        }
+    };
+
     // println!("args: {:#?}", args);
-    println!("input: {:#?}", input);
-    "".parse().unwrap()
-}
-
-#[proc_macro_attribute]
-pub fn route(args: TokenStream, input: TokenStream) -> TokenStream {
-    println!("New Struct:");
-
-    // let out = input.clone();
-    // let args = input.clone();
-    // let args = parse_macro_input!(args as AttributeArgs);
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let args = parse_macro_input!(args as AttributeArgs);
-
-    println!("args: {:#?}", args);
-    // for thing in args {
-    // 	match thing {
-    // 		proc_macro::TokenTree::Literal(lit) => println!("lit is {}", lit),
-    // 		_ => {}
-    // 	}
-    // }
-
     // println!("input: {:#?}", input);
-
-    // out
-    let output = quote! { #input };
-    output.into()
+    expanded.into()
 }

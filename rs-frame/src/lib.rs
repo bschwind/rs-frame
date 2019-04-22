@@ -4,6 +4,17 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::rc::Rc;
 
+pub trait AppPath {
+    fn path_pattern() -> String
+    where
+        Self: Sized;
+    fn from_str(app_path: &str) -> Option<Self>
+    where
+        Self: Sized;
+    fn query_string(&self) -> Option<String>;
+    fn to_string(&self) -> String;
+}
+
 pub struct RouteData {
     pub name: String,
 }
