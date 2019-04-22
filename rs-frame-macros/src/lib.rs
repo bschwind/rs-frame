@@ -4,12 +4,7 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use regex::Regex;
-use syn::{parse_macro_input, AttributeArgs, DeriveInput};
-
-// #[proc_macro]
-// pub fn example_macro_fn(_: TokenStream) -> TokenStream {
-//  "struct Stuff;".parse().unwrap()
-// }
+use syn::{parse_macro_input, DeriveInput};
 
 #[derive(Debug, PartialEq)]
 enum PathToRegexError {
@@ -153,11 +148,52 @@ fn get_string_attr(name: &str, attrs: &Vec<syn::Attribute>) -> Option<String> {
     None
 }
 
+fn has_flag_attr(name: &str, attrs: &Vec<syn::Attribute>) -> bool {
+    for attr in attrs {
+        let attr = attr.parse_meta();
+
+        if let Ok(syn::Meta::Word(ref ident)) = attr {
+            if ident == name {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+fn get_struct_fields(data: &syn::Data) -> Vec<syn::Field> {
+    match data {
+        syn::Data::Struct(data_struct) => {
+            match data_struct.fields {
+                syn::Fields::Named(ref named_fields) => {
+                    named_fields
+                        .named
+                        .iter()
+                        .cloned()
+                        .collect()
+                }
+                _ => panic!("Struct fields must be named")
+            }
+        }
+        _ => panic!("AppPath derive is only supported for structs")
+    }
+}
+
 #[proc_macro_derive(AppPath, attributes(path, query))]
 pub fn app_path_derive(input: TokenStream) -> TokenStream {
     println!("AppPath Struct:");
 
     let input = parse_macro_input!(input as DeriveInput);
+
+    let struct_fields = get_struct_fields(&input.data);
+
+    let (path_fields, query_fields): (Vec<_>, Vec<_>) = struct_fields.into_iter().partition(|f| {
+        !has_flag_attr("query", &f.attrs)
+    });
+
+    println!("Path fields: {:#?}", path_fields);
+    println!("Query fields: {:#?}", query_fields);
 
     let name = &input.ident;
     let generics = input.generics;
@@ -177,10 +213,29 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
 
     println!("Regex for {} is {}", name, path_regex);
 
+    let path_fields_1 = path_fields.clone().into_iter().map(|f| f.ident.unwrap());
+    let path_fields_2 = path_fields.into_iter().map(|f| f.ident.unwrap().to_string());
+
+    let query_fields_1 = query_fields.into_iter().map(|f| f.ident.unwrap());
+
+    let path_field_parsers = quote! {
+        #(
+            #path_fields_1: captures[#path_fields_2].parse().ok()?
+        ),*
+    };
+
+    let query_field_parsers = quote! {
+        #(
+            #query_fields_1: None
+        ),*
+    };
+
+    println!("{}", path_field_parsers.to_string());
+    println!("{}", query_field_parsers.to_string());
+
     let expanded = quote! {
         impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
             fn path_pattern() -> String {
-                // r"^/p/(?P<project_id>[^/]+)/exams/(?P<exam_id>[^/]+)/submissions_expired$".to_string()
                 #path_regex.to_string()
             }
 
@@ -191,11 +246,8 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                 // TODO - get query string
 
                 Some(ExpiredSubmissionsPath {
-                    project_id: captures["project_id"].parse().ok()?,
-                    exam_id: captures["exam_id"].parse().ok()?,
-                    column: None,
-                    direction: None,
-                    keyword: None,
+                    #path_field_parsers,
+                    #query_field_parsers
                 })
             }
 
@@ -212,7 +264,5 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         }
     };
 
-    // println!("args: {:#?}", args);
-    // println!("input: {:#?}", input);
     expanded.into()
 }
