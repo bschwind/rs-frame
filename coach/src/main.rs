@@ -1,6 +1,7 @@
 use regex::Regex;
 use rs_frame::{AppPath, App, Controller, RouteParams};
 use rs_frame_macros::AppPath;
+use serde::{Serialize, Deserialize};
 
 #[derive(Default, Hash)]
 struct EnvironmentDetailController {
@@ -67,17 +68,12 @@ pub struct SomeOtherQuery {
     include_all: bool,
 }
 
-#[derive(Debug)]
-pub enum SortDirection {
-    Asc,
-    Desc,
-}
-
 // #[route("/emails/{email_id}?{query}", "email_detail")]
 // #[derive(AppPath)]
 // #[path("/emails/{email_id}")]
 // /p/{project_id}/exams/active?column=updated_at&direction=desc&keyword=test
 // #[path("/p/{project_id}/exams/active")]
+#[derive(Deserialize)]
 struct ExamListPath {
     project_id: String,
 
@@ -95,21 +91,31 @@ struct ExamListPath {
 // #[path("/settings/account/profile")]
 struct SelfProfilePath {}
 
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Deserialize)]
+struct SubmissionsQuery {
+	column: Option<String>,
+	direction: Option<SortDirection>,
+	keyword: Option<String>,
+	limit: Option<u64>,
+	offset: Option<u64>,
+}
+
 #[derive(AppPath, Debug)]
 #[path("/p/:project_id/exams/:exam_id/submissions_expired")]
 struct ExpiredSubmissionsPath {
     project_id: String,
-
     exam_id: u64,
 
     #[query]
-    column: Option<String>,
-
-    #[query]
-    direction: Option<SortDirection>,
-
-    #[query]
-    keyword: Option<String>,
+    query: Option<SubmissionsQuery>,
 }
 
 // impl AppPath for ExpiredSubmissionsPath {
@@ -156,10 +162,26 @@ fn main() {
         "Pattern of ExpiredSubmissionsPath: {}",
         ExpiredSubmissionsPath::path_pattern()
     );
+
     let app_path_string = "/p/43/exams/10/submissions_expired";
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
-
     println!("expired_path: {:#?}", expired_path);
+
+
+    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20";
+    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    println!("expired_path: {:#?}", expired_path);
+
+    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name";
+    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    println!("expired_path: {:#?}", expired_path);
+
+    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc";
+    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    println!("expired_path: {:#?}", expired_path);
+
+
+
     // println!("expired_path URL: {}", expired_path.unwrap().to_string());
 
     let routes: Vec<Box<dyn AppPath>> = vec![Box::new(expired_path.unwrap())];

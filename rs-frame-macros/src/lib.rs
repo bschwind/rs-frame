@@ -201,17 +201,9 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
 
     let path_string = get_string_attr("path", &input.attrs);
 
-    if let Some(ref url_path) = path_string {
-        println!("We see a path defined as {}", url_path);
-    } else {
-        panic!("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct")
-    }
-
-    let url_path = path_string.unwrap();
+    let url_path = path_string.expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
 
     let path_regex = path_to_regex(&url_path).unwrap();
-
-    println!("Regex for {} is {}", name, path_regex);
 
     let path_fields_1 = path_fields.clone().into_iter().map(|f| f.ident.unwrap());
     let path_fields_2 = path_fields.into_iter().map(|f| f.ident.unwrap().to_string());
@@ -224,26 +216,39 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         ),*
     };
 
+    // TODO - support non-Option querystring fields
     let query_field_parsers = quote! {
         #(
-            #query_fields_1: None
+            #query_fields_1: query_string.and_then(|q| qs::from_str(q).ok())
         ),*
     };
 
-    println!("{}", path_field_parsers.to_string());
-    println!("{}", query_field_parsers.to_string());
-
     let expanded = quote! {
         impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
+
             fn path_pattern() -> String {
                 #path_regex.to_string()
             }
 
             fn from_str(app_path: &str) -> Option<Self> {
-                let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
-                let captures = path_pattern.captures(app_path)?;
+                use serde_qs as qs;
 
-                // TODO - get query string
+                let question_pos = app_path.find('?');
+                let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
+
+                // TODO - store this in lazy_static
+                let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
+                let captures = path_pattern.captures(just_path)?;
+
+                let query_string = question_pos.map(|question_pos| {
+                    let mut query_string = &app_path[question_pos..];
+
+                    if query_string.starts_with('?') {
+                        query_string = &query_string[1..];
+                    }
+
+                    query_string
+                });
 
                 Some(ExpiredSubmissionsPath {
                     #path_field_parsers,

@@ -8,3 +8,5 @@ edition = "2018"
 rs-frame = { path = "../rs-frame" }
 rs-frame-macros = { path = "../rs-frame-macros" }
 regex = "1.1.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_qs = "0.4.5"
