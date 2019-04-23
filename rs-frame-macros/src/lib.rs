@@ -180,6 +180,21 @@ fn get_struct_fields(data: &syn::Data) -> Vec<syn::Field> {
     }
 }
 
+fn field_is_option(field: &syn::Field) -> bool {
+    match field.ty {
+        syn::Type::Path(ref type_path) => {
+            type_path
+                .path
+                .segments
+                .iter()
+                .last()
+                .map(|segment| segment.ident == "Option")
+                .unwrap_or(false)
+        }
+        _ => false
+    }
+}
+
 #[proc_macro_derive(AppPath, attributes(path, query))]
 pub fn app_path_derive(input: TokenStream) -> TokenStream {
     println!("AppPath Struct:");
@@ -192,9 +207,6 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         !has_flag_attr("query", &f.attrs)
     });
 
-    println!("Path fields: {:#?}", path_fields);
-    println!("Query fields: {:#?}", query_fields);
-
     let name = &input.ident;
     let generics = input.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -205,21 +217,41 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
 
     let path_regex = path_to_regex(&url_path).unwrap();
 
-    let path_fields_1 = path_fields.clone().into_iter().map(|f| f.ident.unwrap());
-    let path_fields_2 = path_fields.into_iter().map(|f| f.ident.unwrap().to_string());
+    // TODO - validate path_regex and make sure struct and path have matching fields
 
-    let query_fields_1 = query_fields.into_iter().map(|f| f.ident.unwrap());
+    let path_field_assignments = path_fields.clone().into_iter().map(|f| {
+        let f_ident = f.ident.unwrap();
+        let f_ident_str = f_ident.to_string();
+
+        quote! {
+            #f_ident: captures[#f_ident_str].parse().ok()?
+        }
+    });
+
+    let query_field_assignments = query_fields.into_iter().map(|f| {
+        let is_option = field_is_option(&f);
+        let f_ident = f.ident.unwrap();
+
+        if is_option {
+            quote! {
+                #f_ident: query_string.and_then(|q| qs::from_str(q).ok())
+            }
+        } else {
+            quote! {
+                #f_ident: qs::from_str(query_string?).ok()?
+            }
+        }
+    });
 
     let path_field_parsers = quote! {
         #(
-            #path_fields_1: captures[#path_fields_2].parse().ok()?
+            #path_field_assignments
         ),*
     };
 
-    // TODO - support non-Option querystring fields
     let query_field_parsers = quote! {
         #(
-            #query_fields_1: query_string.and_then(|q| qs::from_str(q).ok())
+            #query_field_assignments
         ),*
     };
 
@@ -257,6 +289,10 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             }
 
             fn query_string(&self) -> Option<String> {
+                // TODO - implement
+                //        Be sure to remove duplicates because
+                //        there could be multiple fields with
+                //        a #[query] attribute that have common fields
                 None
             }
 

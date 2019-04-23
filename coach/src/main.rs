@@ -58,12 +58,6 @@ pub struct GenericRoute<T> {
 }
 
 #[derive(Debug)]
-pub struct LimitOffsetQuery {
-    limit: Option<u64>,
-    offset: Option<u64>,
-}
-
-#[derive(Debug)]
 pub struct SomeOtherQuery {
     include_all: bool,
 }
@@ -104,6 +98,10 @@ struct SubmissionsQuery {
 	column: Option<String>,
 	direction: Option<SortDirection>,
 	keyword: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LimitOffsetQuery {
 	limit: Option<u64>,
 	offset: Option<u64>,
 }
@@ -115,7 +113,10 @@ struct ExpiredSubmissionsPath {
     exam_id: u64,
 
     #[query]
-    query: Option<SubmissionsQuery>,
+    query: std::option::Option<SubmissionsQuery>,
+
+    #[query]
+    limit: Option<LimitOffsetQuery>,
 }
 
 // impl AppPath for ExpiredSubmissionsPath {
@@ -167,8 +168,7 @@ fn main() {
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
     println!("expired_path: {:#?}", expired_path);
 
-
-    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20";
+    let app_path_string = "/p/22/exams/10/submissions_expired?limit=20&keyword=test";
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
     println!("expired_path: {:#?}", expired_path);
 
