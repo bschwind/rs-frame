@@ -1,6 +1,5 @@
 use regex::Regex;
 use rs_frame::{AppPath, App, Controller, RouteParams};
-use rs_frame_macros::AppPath;
 use serde::{Serialize, Deserialize};
 
 #[derive(Default, Hash)]

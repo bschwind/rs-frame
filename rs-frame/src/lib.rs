@@ -4,6 +4,8 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::rc::Rc;
 
+pub use rs_frame_macros::AppPath;
+
 pub trait AppPath {
     fn path_pattern() -> String
     where
