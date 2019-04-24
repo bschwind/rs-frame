@@ -1,11 +1,11 @@
 #![recursion_limit = "128"]
 
 extern crate proc_macro;
-use std::collections::HashSet;
 use proc_macro::TokenStream;
 use proc_macro2;
 use quote::quote;
 use regex::Regex;
+use std::collections::HashSet;
 use syn::{parse_macro_input, DeriveInput};
 
 #[derive(Debug, PartialEq)]
@@ -213,15 +213,22 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
     let url_path = path_string
         .expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
 
-    let (path_regex_str, format_str) = path_to_regex(&url_path).expect("Could not convert path attribute to a valid regex");
+    let (path_regex_str, format_str) =
+        path_to_regex(&url_path).expect("Could not convert path attribute to a valid regex");
 
     // Validate path_regex and make sure struct and path have matching fields
-    let path_regex = Regex::new(&path_regex_str).expect("path attribute was not compiled into a valid regex");
+    let path_regex =
+        Regex::new(&path_regex_str).expect("path attribute was not compiled into a valid regex");
 
-    let regex_capture_names_set: HashSet<String> = path_regex.capture_names().into_iter().filter_map(|c_opt| {
-        c_opt.map(|c| c.to_string())
-    }).collect();
-    let field_names_set: HashSet<String> = path_fields.clone().into_iter().map(|f| f.ident.unwrap().to_string()).collect();
+    let regex_capture_names_set: HashSet<String> = path_regex
+        .capture_names()
+        .filter_map(|c_opt| c_opt.map(|c| c.to_string()))
+        .collect();
+    let field_names_set: HashSet<String> = path_fields
+        .clone()
+        .into_iter()
+        .map(|f| f.ident.unwrap().to_string())
+        .collect();
 
     if regex_capture_names_set != field_names_set {
         let missing_from_path = field_names_set.difference(&regex_capture_names_set);
