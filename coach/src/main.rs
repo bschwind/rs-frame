@@ -83,21 +83,21 @@ struct ExamListPath {
 // #[path("/settings/account/profile")]
 struct SelfProfilePath {}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct SubmissionsQuery {
     column: Option<String>,
     direction: Option<SortDirection>,
     keyword: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct LimitOffsetQuery {
     limit: Option<u64>,
     offset: Option<u64>,
@@ -114,6 +114,9 @@ struct ExpiredSubmissionsPath {
 
     #[query]
     limit: Option<LimitOffsetQuery>,
+
+    #[query]
+    required_query: LimitOffsetQuery,
 }
 
 // impl AppPath for ExpiredSubmissionsPath {
@@ -148,12 +151,12 @@ struct ExpiredSubmissionsPath {
 //     }
 // }
 
-#[derive(Debug)]
-pub struct MyQuery {
-    name: String,
+// #[derive(Debug)]
+// pub struct MyQuery {
+//     name: String,
 
-    limit_offset: Option<LimitOffsetQuery>,
-}
+//     limit_offset: Option<LimitOffsetQuery>,
+// }
 
 fn main() {
     println!(
@@ -178,6 +181,20 @@ fn main() {
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
     println!("expired_path: {:#?}", expired_path);
 
+    // let start = std::time::Instant::now();
+
+    // let mut sum: u64 = 0;
+    // for _ in 0..100_000 {
+    //     let app_path_string =
+    //         "/p/43/exams/11/submissions_expired?limit=20&offset=10&column=users.name&direction=asc";
+    //     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+
+    //     sum += expired_path.unwrap().exam_id;
+    // }
+
+    // println!("Sum: {}", sum);
+    // println!("Time: {:?}", (std::time::Instant::now() - start) / 100_000);
+
     // println!("expired_path URL: {}", expired_path.unwrap().to_string());
 
     let routes: Vec<Box<dyn AppPath>> = vec![Box::new(expired_path.unwrap())];
@@ -189,14 +206,14 @@ fn main() {
     // let controllers: Vec<Box<dyn Controller>> = vec!(Box::new(EnvironmentDetailController::default()), Box::new(HomeController));
 
     // let email_path = ExamListPath {
-    // 	email_id: "some_email".to_string(),
-    // 	limit_offset: Some(LimitOffsetQuery {
-    // 		limit: Some(20),
-    // 		offset: Some(20),
-    // 	}),
-    // 	some_other: SomeOtherQuery {
-    // 		include_all: false
-    // 	}
+    //  email_id: "some_email".to_string(),
+    //  limit_offset: Some(LimitOffsetQuery {
+    //      limit: Some(20),
+    //      offset: Some(20),
+    //  }),
+    //  some_other: SomeOtherQuery {
+    //      include_all: false
+    //  }
     // };
 
     // println!("Query string: {}", email_path.query_string());

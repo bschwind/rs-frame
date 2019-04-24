@@ -16,7 +16,7 @@ enum PathToRegexError {
     InvalidTrailingSlash,
 }
 
-fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
+fn path_to_regex(path: &str) -> Result<(String, String), PathToRegexError> {
     enum ParseState {
         Initial,
         Static,
@@ -30,6 +30,7 @@ fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
     let ident_regex = Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]*$").unwrap();
 
     let mut regex = "".to_string();
+    let mut format_str = "".to_string();
     let mut parse_state = ParseState::Initial;
 
     for byte in path.chars() {
@@ -40,14 +41,17 @@ fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
                 }
 
                 regex += "^/";
+                format_str += "/";
 
                 parse_state = ParseState::Static;
             }
             ParseState::Static => {
                 if byte == ':' {
+                    format_str.push('{');
                     parse_state = ParseState::VarName("".to_string());
                 } else {
                     regex.push(byte);
+                    format_str.push(byte);
                     parse_state = ParseState::Static;
                 }
             }
@@ -61,6 +65,7 @@ fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
                         println!("checking name: {}\tgood!", name);
                     }
 
+                    format_str += &format!("{}}}/", name);
                     regex += &format!("(?P<{}>[^/]+)/", name);
                     parse_state = ParseState::Static;
                 } else {
@@ -81,12 +86,12 @@ fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
 
     regex += "$";
 
-    Ok(regex)
+    Ok((regex, format_str))
 }
 
 #[test]
 fn test_path_to_regex() {
-    let regex = path_to_regex("/p/:project_id/exams/:exam_id/submissions_expired").unwrap();
+    let (regex, _) = path_to_regex("/p/:project_id/exams/:exam_id/submissions_expired").unwrap();
     assert_eq!(
         regex,
         r"^/p/(?P<project_id>[^/]+)/exams/(?P<exam_id>[^/]+)/submissions_expired$"
@@ -95,7 +100,7 @@ fn test_path_to_regex() {
 
 #[test]
 fn test_path_to_regex_no_path_params() {
-    let regex = path_to_regex("/p/exams/submissions_expired").unwrap();
+    let (regex, _) = path_to_regex("/p/exams/submissions_expired").unwrap();
     assert_eq!(regex, r"^/p/exams/submissions_expired$");
 }
 
@@ -208,7 +213,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
     let url_path = path_string
         .expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
 
-    let path_regex_str = path_to_regex(&url_path).expect("Could not convert path attribute to a valid regex");
+    let (path_regex_str, format_str) = path_to_regex(&url_path).expect("Could not convert path attribute to a valid regex");
 
     // Validate path_regex and make sure struct and path have matching fields
     let path_regex = Regex::new(&path_regex_str).expect("path attribute was not compiled into a valid regex");
@@ -235,7 +240,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         }
     });
 
-    let query_field_assignments = query_fields.into_iter().map(|f| {
+    let query_field_assignments = query_fields.clone().into_iter().map(|f| {
         let is_option = field_is_option(&f);
         let f_ident = f.ident.unwrap();
 
@@ -259,6 +264,41 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
     let query_field_parsers = quote! {
         #(
             #query_field_assignments
+        ),*
+    };
+
+    let format_args = path_fields.clone().into_iter().map(|f| {
+        let f_ident = f.ident.unwrap();
+
+        quote! {
+            #f_ident = self.#f_ident
+        }
+    });
+
+    let format_args = quote! {
+        #(
+            #format_args
+        ),*
+    };
+
+    let query_field_to_string_statements = query_fields.into_iter().map(|f| {
+        let is_option = field_is_option(&f);
+        let f_ident = f.ident.unwrap();
+
+        if is_option {
+            quote! {
+                self.#f_ident.as_ref().and_then(|q| qs::to_string(&q).ok())
+            }
+        } else {
+            quote! {
+                qs::to_string(&self.#f_ident).ok()
+            }
+        }
+    });
+
+    let encoded_query_fields = quote! {
+        #(
+            #query_field_to_string_statements
         ),*
     };
 
@@ -298,18 +338,37 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             }
 
             fn query_string(&self) -> Option<String> {
-                // TODO - implement
-                //        Be sure to remove duplicates because
+                use rs_frame::serde_qs as qs;
+
+                // TODO - Remove duplicates because
                 //        there could be multiple fields with
                 //        a #[query] attribute that have common fields
-                None
+
+                // TODO - can this be done with an on-stack array?
+                let encoded_queries = vec![#encoded_query_fields];
+                let filtered: Vec<_> = encoded_queries.into_iter().filter_map(std::convert::identity).collect();
+
+                if !filtered.is_empty() {
+                    Some(filtered.join("&"))
+                } else {
+                    None
+                }
             }
 
             fn to_string(&self) -> String {
-                format!(
-                    "/p/{}/exams/{}/submissions_expired",
-                    self.project_id, self.exam_id
-                )
+                if let Some(query) = self.query_string() {
+                    let path = format!(
+                        #format_str,
+                        #format_args
+                    );
+
+                    format!("{}?{}", path, query)
+                } else {
+                    format!(
+                        #format_str,
+                        #format_args
+                    )
+                }
             }
         }
     };
