@@ -1,4 +1,3 @@
-use regex::Regex;
 use rs_frame::{AppPath, App, Controller, RouteParams};
 use serde::{Serialize, Deserialize};
 

@@ -1,6 +1,5 @@
-use regex::Regex;
 use rs_frame::AppPath;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]

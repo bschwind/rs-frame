@@ -4,6 +4,12 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::rc::Rc;
 
+#[doc(hidden)]
+pub use regex;
+
+#[doc(hidden)]
+pub use serde_qs;
+
 pub use rs_frame_macros::AppPath;
 
 pub trait AppPath {

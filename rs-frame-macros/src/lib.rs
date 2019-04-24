@@ -263,13 +263,13 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             }
 
             fn from_str(app_path: &str) -> Option<Self> {
-                use serde_qs as qs;
+                use rs_frame::serde_qs as qs;
 
                 let question_pos = app_path.find('?');
                 let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
 
                 // TODO - store this in lazy_static
-                let path_pattern = Regex::new(&Self::path_pattern()).ok()?;
+                let path_pattern = rs_frame::regex::Regex::new(&Self::path_pattern()).ok()?;
                 let captures = path_pattern.captures(just_path)?;
 
                 let query_string = question_pos.map(|question_pos| {
