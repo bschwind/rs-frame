@@ -1,5 +1,5 @@
-use rs_frame::{AppPath, App, Controller, RouteParams};
-use serde::{Serialize, Deserialize};
+use rs_frame::{App, AppPath, Controller, RouteParams};
+use serde::{Deserialize, Serialize};
 
 #[derive(Default, Hash)]
 struct EnvironmentDetailController {
@@ -83,7 +83,6 @@ struct ExamListPath {
 // #[path("/settings/account/profile")]
 struct SelfProfilePath {}
 
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
@@ -93,15 +92,15 @@ pub enum SortDirection {
 
 #[derive(Debug, Deserialize)]
 struct SubmissionsQuery {
-	column: Option<String>,
-	direction: Option<SortDirection>,
-	keyword: Option<String>,
+    column: Option<String>,
+    direction: Option<SortDirection>,
+    keyword: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct LimitOffsetQuery {
-	limit: Option<u64>,
-	offset: Option<u64>,
+    limit: Option<u64>,
+    offset: Option<u64>,
 }
 
 #[derive(AppPath, Debug)]
@@ -174,11 +173,10 @@ fn main() {
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
     println!("expired_path: {:#?}", expired_path);
 
-    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc";
+    let app_path_string =
+        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc";
     let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
     println!("expired_path: {:#?}", expired_path);
-
-
 
     // println!("expired_path URL: {}", expired_path.unwrap().to_string());
 

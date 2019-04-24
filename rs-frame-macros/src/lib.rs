@@ -1,7 +1,8 @@
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
+use proc_macro2;
 use quote::quote;
 use regex::Regex;
 use syn::{parse_macro_input, DeriveInput};
@@ -73,7 +74,7 @@ fn path_to_regex(path: &str) -> Result<String, PathToRegexError> {
         regex += &format!("(?P<{}>[^/]+)", name);
     }
 
-    if regex.ends_with("/") {
+    if regex.ends_with('/') {
         return Err(PathToRegexError::InvalidTrailingSlash);
     }
 
@@ -130,7 +131,7 @@ fn test_path_to_regex_invalid_ending() {
     assert_eq!(regex, Err(PathToRegexError::InvalidTrailingSlash));
 }
 
-fn get_string_attr(name: &str, attrs: &Vec<syn::Attribute>) -> Option<String> {
+fn get_string_attr(name: &str, attrs: &[syn::Attribute]) -> Option<String> {
     for attr in attrs {
         let attr = attr.parse_meta();
 
@@ -148,7 +149,7 @@ fn get_string_attr(name: &str, attrs: &Vec<syn::Attribute>) -> Option<String> {
     None
 }
 
-fn has_flag_attr(name: &str, attrs: &Vec<syn::Attribute>) -> bool {
+fn has_flag_attr(name: &str, attrs: &[syn::Attribute]) -> bool {
     for attr in attrs {
         let attr = attr.parse_meta();
 
@@ -164,34 +165,24 @@ fn has_flag_attr(name: &str, attrs: &Vec<syn::Attribute>) -> bool {
 
 fn get_struct_fields(data: &syn::Data) -> Vec<syn::Field> {
     match data {
-        syn::Data::Struct(data_struct) => {
-            match data_struct.fields {
-                syn::Fields::Named(ref named_fields) => {
-                    named_fields
-                        .named
-                        .iter()
-                        .cloned()
-                        .collect()
-                }
-                _ => panic!("Struct fields must be named")
-            }
-        }
-        _ => panic!("AppPath derive is only supported for structs")
+        syn::Data::Struct(data_struct) => match data_struct.fields {
+            syn::Fields::Named(ref named_fields) => named_fields.named.iter().cloned().collect(),
+            _ => panic!("Struct fields must be named"),
+        },
+        _ => panic!("AppPath derive is only supported for structs"),
     }
 }
 
 fn field_is_option(field: &syn::Field) -> bool {
     match field.ty {
-        syn::Type::Path(ref type_path) => {
-            type_path
-                .path
-                .segments
-                .iter()
-                .last()
-                .map(|segment| segment.ident == "Option")
-                .unwrap_or(false)
-        }
-        _ => false
+        syn::Type::Path(ref type_path) => type_path
+            .path
+            .segments
+            .iter()
+            .last()
+            .map(|segment| segment.ident == "Option")
+            .unwrap_or(false),
+        _ => false,
     }
 }
 
@@ -203,9 +194,9 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
 
     let struct_fields = get_struct_fields(&input.data);
 
-    let (path_fields, query_fields): (Vec<_>, Vec<_>) = struct_fields.into_iter().partition(|f| {
-        !has_flag_attr("query", &f.attrs)
-    });
+    let (path_fields, query_fields): (Vec<_>, Vec<_>) = struct_fields
+        .into_iter()
+        .partition(|f| !has_flag_attr("query", &f.attrs));
 
     let name = &input.ident;
     let generics = input.generics;
@@ -213,7 +204,8 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
 
     let path_string = get_string_attr("path", &input.attrs);
 
-    let url_path = path_string.expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
+    let url_path = path_string
+        .expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
 
     let path_regex = path_to_regex(&url_path).unwrap();
 
@@ -255,7 +247,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         ),*
     };
 
-    let expanded = quote! {
+    let app_path_impl = quote! {
         impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
 
             fn path_pattern() -> String {
@@ -265,12 +257,14 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             fn from_str(app_path: &str) -> Option<Self> {
                 use rs_frame::serde_qs as qs;
 
+                rs_frame::lazy_static! {
+                    static ref PATH_REGEX: rs_frame::Regex = rs_frame::Regex::new(#path_regex).expect("Failed to compile regex");
+                }
+
                 let question_pos = app_path.find('?');
                 let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
 
-                // TODO - store this in lazy_static
-                let path_pattern = rs_frame::regex::Regex::new(&Self::path_pattern()).ok()?;
-                let captures = path_pattern.captures(just_path)?;
+                let captures = (*PATH_REGEX).captures(just_path)?;
 
                 let query_string = question_pos.map(|question_pos| {
                     let mut query_string = &app_path[question_pos..];
@@ -305,5 +299,17 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         }
     };
 
-    expanded.into()
+    let impl_wrapper = syn::Ident::new(
+        &format!("_IMPL_APPPATH_FOR_{}", name.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    let out = quote! {
+        const #impl_wrapper: () = {
+            extern crate rs_frame;
+            #app_path_impl
+        };
+    };
+
+    out.into()
 }

@@ -5,7 +5,10 @@ use std::hash::Hasher;
 use std::rc::Rc;
 
 #[doc(hidden)]
-pub use regex;
+pub use lazy_static::lazy_static;
+
+#[doc(hidden)]
+pub use regex::Regex;
 
 #[doc(hidden)]
 pub use serde_qs;
