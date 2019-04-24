@@ -1,6 +1,7 @@
 #![recursion_limit = "128"]
 
 extern crate proc_macro;
+use std::collections::HashSet;
 use proc_macro::TokenStream;
 use proc_macro2;
 use quote::quote;
@@ -207,9 +208,23 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
     let url_path = path_string
         .expect("derive(AppPath) requires a #[path(\"/your/path/here\")] attribute on the struct");
 
-    let path_regex = path_to_regex(&url_path).unwrap();
+    let path_regex_str = path_to_regex(&url_path).expect("Could not convert path attribute to a valid regex");
 
-    // TODO - validate path_regex and make sure struct and path have matching fields
+    // Validate path_regex and make sure struct and path have matching fields
+    let path_regex = Regex::new(&path_regex_str).expect("path attribute was not compiled into a valid regex");
+
+    let regex_capture_names_set: HashSet<String> = path_regex.capture_names().into_iter().filter_map(|c_opt| {
+        c_opt.map(|c| c.to_string())
+    }).collect();
+    let field_names_set: HashSet<String> = path_fields.clone().into_iter().map(|f| f.ident.unwrap().to_string()).collect();
+
+    if regex_capture_names_set != field_names_set {
+        let missing_from_path = field_names_set.difference(&regex_capture_names_set);
+        let missing_from_struct = regex_capture_names_set.difference(&field_names_set);
+
+        let error_msg = format!("\nFields in struct missing from path pattern: {:?}\nFields in path missing from struct: {:?}", missing_from_path, missing_from_struct);
+        panic!(error_msg);
+    }
 
     let path_field_assignments = path_fields.clone().into_iter().map(|f| {
         let f_ident = f.ident.unwrap();
@@ -251,14 +266,14 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
 
             fn path_pattern() -> String {
-                #path_regex.to_string()
+                #path_regex_str.to_string()
             }
 
             fn from_str(app_path: &str) -> Option<Self> {
                 use rs_frame::serde_qs as qs;
 
                 rs_frame::lazy_static! {
-                    static ref PATH_REGEX: rs_frame::Regex = rs_frame::Regex::new(#path_regex).expect("Failed to compile regex");
+                    static ref PATH_REGEX: rs_frame::Regex = rs_frame::Regex::new(#path_regex_str).expect("Failed to compile regex");
                 }
 
                 let question_pos = app_path.find('?');
