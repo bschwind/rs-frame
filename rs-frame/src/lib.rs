@@ -15,7 +15,7 @@ pub use serde_qs;
 
 pub use rs_frame_macros::AppPath;
 
-pub trait AppPath {
+pub trait AppPath: std::fmt::Display {
     fn path_pattern() -> String
     where
         Self: Sized;
@@ -23,7 +23,6 @@ pub trait AppPath {
     where
         Self: Sized;
     fn query_string(&self) -> Option<String>;
-    fn to_string(&self) -> String;
 }
 
 pub struct RouteData {

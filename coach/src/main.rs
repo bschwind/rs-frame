@@ -200,7 +200,7 @@ fn main() {
     let routes: Vec<Box<dyn AppPath>> = vec![Box::new(expired_path.unwrap())];
 
     for route in routes {
-        println!("Route: {}", route.to_string());
+        println!("Route: {}", route);
     }
 
     // let controllers: Vec<Box<dyn Controller>> = vec!(Box::new(EnvironmentDetailController::default()), Box::new(HomeController));

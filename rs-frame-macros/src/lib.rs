@@ -379,17 +379,20 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                     None
                 }
             }
+        }
 
-            fn to_string(&self) -> String {
+        impl #impl_generics std::fmt::Display for #name #ty_generics #where_clause {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 if let Some(query) = self.query_string() {
                     let path = format!(
                         #format_str,
                         #format_args
                     );
 
-                    format!("{}?{}", path, query)
+                    write!(f, "{}?{}", path, query)
                 } else {
-                    format!(
+                    write!(
+                        f,
                         #format_str,
                         #format_args
                     )

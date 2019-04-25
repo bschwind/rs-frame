@@ -185,7 +185,10 @@ fn no_params_simple_query_url_decoding() {
             query: UserListQuery {
                 limit: None,
                 offset: None,
-                keyword: Some("some keyword with ampersand-question-equals-stuff&?=:;@#%^[]{}`\"<>日本語".to_string()),
+                keyword: Some(
+                    "some keyword with ampersand-question-equals-stuff&?=:;@#%^[]{}`\"<>日本語"
+                        .to_string()
+                ),
                 friends_only: false,
             }
         }
@@ -250,7 +253,6 @@ fn one_param_num_out_of_range() {
     assert!(path.is_none());
 }
 
-
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
@@ -287,28 +289,34 @@ struct ExpiredSubmissionsPath {
 #[test]
 fn test_no_query() {
     let path = ExpiredSubmissionsPath::from_str("/p/43/exams/10/submissions_expired").unwrap();
-    assert_eq!(path, ExpiredSubmissionsPath {
-        project_id: "43".to_string(),
-        exam_id: 10,
-        query: None,
-        limit: None,
-    });
+    assert_eq!(
+        path,
+        ExpiredSubmissionsPath {
+            project_id: "43".to_string(),
+            exam_id: 10,
+            query: None,
+            limit: None,
+        }
+    );
 }
 
 #[test]
 fn test_only_question_mark() {
     let path = ExpiredSubmissionsPath::from_str("/p/43/exams/10/submissions_expired?").unwrap();
-    assert_eq!(path, ExpiredSubmissionsPath {
-        project_id: "43".to_string(),
-        exam_id: 10,
-        query: Some(SubmissionsQuery {
-            column: None,
-            direction: None,
-            keyword: None,
-        }),
-        limit: Some(LimitOffsetQuery {
-            limit: None,
-            offset: None,
-        }),
-    });
+    assert_eq!(
+        path,
+        ExpiredSubmissionsPath {
+            project_id: "43".to_string(),
+            exam_id: 10,
+            query: Some(SubmissionsQuery {
+                column: None,
+                direction: None,
+                keyword: None,
+            }),
+            limit: Some(LimitOffsetQuery {
+                limit: None,
+                offset: None,
+            }),
+        }
+    );
 }
