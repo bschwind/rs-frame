@@ -164,16 +164,26 @@ fn main() {
         ExpiredSubmissionsPath::path_pattern()
     );
 
-    let expired_path: ExpiredSubmissionsPath = "/p/43/exams/10/submissions_expired".parse().unwrap();
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired".parse().unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let expired_path: ExpiredSubmissionsPath = "/p/22/exams/10/submissions_expired?limit=20&keyword=test".parse().unwrap();
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/22/exams/10/submissions_expired?limit=20&keyword=test"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let expired_path: ExpiredSubmissionsPath = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name".parse().unwrap();
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let expired_path: ExpiredSubmissionsPath = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc".parse().unwrap();
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
     // let start = std::time::Instant::now();

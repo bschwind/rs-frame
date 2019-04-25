@@ -1,4 +1,4 @@
-use rs_frame::AppPath;
+use rs_frame::{AppPath, PathParseErr};
 use serde::{Deserialize, Serialize};
 
 #[derive(AppPath, Debug, PartialEq)]
@@ -14,13 +14,19 @@ fn no_params() {
 #[test]
 fn trailing_slash() {
     let path: Result<UsersListPath, _> = "/users/".parse();
-    assert!(path.is_err()); // TODO - err
+    match path {
+        Err(PathParseErr::NoMatches) => {}
+        _ => assert!(false),
+    }
 }
 
 #[test]
 fn no_leading_slash() {
     let path: Result<UsersListPath, _> = "users".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::NoMatches) => {}
+        _ => assert!(false),
+    }
 }
 
 #[derive(AppPath, Debug, PartialEq)]
@@ -38,13 +44,19 @@ fn one_param() {
 #[test]
 fn invalid_param_type() {
     let path: Result<UserDetailPath, _> = "/users/not_a_u64".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::ParamParseErr(_)) => {}
+        _ => assert!(false),
+    }
 }
 
 #[test]
 fn one_param_no_leading_slash() {
     let path: Result<UserDetailPath, _> = "users/4216".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::NoMatches) => {}
+        _ => assert!(false),
+    }
 }
 
 #[derive(AppPath, Debug, PartialEq)]
@@ -110,7 +122,10 @@ struct UsersListWithQuery {
 #[test]
 fn no_params_simple_query_required() {
     let path: Result<UsersListWithQuery, _> = "/users".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::NoQueryString) => {}
+        _ => assert!(false),
+    }
 }
 
 #[test]
@@ -152,12 +167,18 @@ fn no_params_simple_query_missing_bool_field() {
 #[test]
 fn no_params_simple_query_invalid_type() {
     let path: Result<UsersListWithQuery, _> = "/users?offset=test".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::QueryParseErr(_)) => {}
+        _ => assert!(false),
+    }
 }
 
 #[test]
 fn no_params_simple_query_all_defined() {
-    let path: UsersListWithQuery = "/users?offset=10&limit=20&friends_only=false&keyword=some_keyword".parse().unwrap();
+    let path: UsersListWithQuery =
+        "/users?offset=10&limit=20&friends_only=false&keyword=some_keyword"
+            .parse()
+            .unwrap();
     assert_eq!(
         path,
         UsersListWithQuery {
@@ -247,7 +268,10 @@ fn one_param_optional_query_present() {
 #[test]
 fn one_param_num_out_of_range() {
     let path: Result<UserDetailExtraPath, _> = "/users/256".parse();
-    assert!(path.is_err());
+    match path {
+        Err(PathParseErr::ParamParseErr(_)) => {}
+        _ => assert!(false),
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]

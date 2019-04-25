@@ -239,7 +239,9 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         let f_ident_str = f_ident.to_string();
 
         quote! {
-            #f_ident: captures[#f_ident_str].parse().map_err(|_| ())?
+            #f_ident: captures[#f_ident_str].parse().map_err(|e| {
+                PathParseErr::ParamParseErr(std::string::ToString::to_string(&e))
+            })?
         }
     });
 
@@ -253,7 +255,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             }
         } else {
             quote! {
-                #f_ident: qs::from_str(query_string.ok_or(())?).map_err(|_| ())?
+                #f_ident: qs::from_str(query_string.ok_or(PathParseErr::NoQueryString)?).map_err(|e| PathParseErr::QueryParseErr(e.description().to_string()))?
             }
         }
     });
@@ -376,7 +378,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         }
 
         impl #impl_generics std::str::FromStr for #name #ty_generics #where_clause {
-            type Err = ();
+            type Err = rs_frame::PathParseErr;
 
             fn from_str(app_path: &str) -> Result<Self, Self::Err> {
                 use rs_frame::serde_qs as qs;
@@ -389,7 +391,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                 let question_pos = app_path.find('?');
                 let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
 
-                let captures = (*PATH_REGEX).captures(just_path).ok_or(())?;
+                let captures = (*PATH_REGEX).captures(just_path).ok_or(PathParseErr::NoMatches)?;
 
                 let query_string = question_pos.map(|question_pos| {
                     let mut query_string = &app_path[question_pos..];

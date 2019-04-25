@@ -15,9 +15,12 @@ pub use serde_qs;
 
 pub use rs_frame_macros::AppPath;
 
+#[derive(Debug)]
 pub enum PathParseErr {
-	NoMatches,
-	NoQueryString,
+    NoMatches,
+    NoQueryString,
+    ParamParseErr(String),
+    QueryParseErr(String),
 }
 
 pub trait AppPath: std::fmt::Display + std::str::FromStr {
