@@ -78,6 +78,7 @@ fn path_to_regex(path: &str) -> Result<(String, String), PathToRegexError> {
 
     if let ParseState::VarName(name) = parse_state {
         regex += &format!("(?P<{}>[^/]+)", name);
+        format_str.push('}');
     }
 
     if regex.ends_with('/') {
@@ -309,6 +310,31 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         ),*
     };
 
+    let struct_constructor = match (
+        path_field_parsers.is_empty(),
+        query_field_parsers.is_empty(),
+    ) {
+        (true, true) => quote! {
+            #name {}
+        },
+        (true, false) => quote! {
+            #name {
+                #query_field_parsers
+            }
+        },
+        (false, true) => quote! {
+            #name {
+                #path_field_parsers
+            }
+        },
+        (false, false) => quote! {
+            #name {
+                #path_field_parsers,
+                #query_field_parsers
+            }
+        },
+    };
+
     let app_path_impl = quote! {
         impl #impl_generics rs_frame::AppPath for #name #ty_generics #where_clause {
 
@@ -338,10 +364,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                     query_string
                 });
 
-                Some(ExpiredSubmissionsPath {
-                    #path_field_parsers,
-                    #query_field_parsers
-                })
+                Some(#struct_constructor)
             }
 
             fn query_string(&self) -> Option<String> {
@@ -352,7 +375,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                 //        a #[query] attribute that have common fields
 
                 // TODO - can this be done with an on-stack array?
-                let encoded_queries = vec![#encoded_query_fields];
+                let encoded_queries: Vec<Option<String>> = vec![#encoded_query_fields];
                 let filtered: Vec<_> = encoded_queries.into_iter().filter_map(std::convert::identity).collect();
 
                 if !filtered.is_empty() {
