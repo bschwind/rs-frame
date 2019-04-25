@@ -59,10 +59,7 @@ fn path_to_regex(path: &str) -> Result<(String, String), PathToRegexError> {
                 if byte == '/' {
                     // Validate 'name' as a Rust identifier
                     if !ident_regex.is_match(&name) {
-                        println!("checking name: {}\tbad!", name);
                         return Err(PathToRegexError::InvalidIdentifier(name));
-                    } else {
-                        println!("checking name: {}\tgood!", name);
                     }
 
                     format_str += &format!("{}}}/", name);
@@ -78,7 +75,7 @@ fn path_to_regex(path: &str) -> Result<(String, String), PathToRegexError> {
 
     if let ParseState::VarName(name) = parse_state {
         regex += &format!("(?P<{}>[^/]+)", name);
-        format_str.push('}');
+        format_str += &format!("{}}}", name);
     }
 
     if regex.ends_with('/') {
@@ -195,8 +192,6 @@ fn field_is_option(field: &syn::Field) -> bool {
 
 #[proc_macro_derive(AppPath, attributes(path, query))]
 pub fn app_path_derive(input: TokenStream) -> TokenStream {
-    println!("AppPath Struct:");
-
     let input = parse_macro_input!(input as DeriveInput);
 
     let struct_fields = get_struct_fields(&input.data);
