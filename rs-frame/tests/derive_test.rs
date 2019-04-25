@@ -7,20 +7,20 @@ struct UsersListPath {}
 
 #[test]
 fn no_params() {
-    let path = UsersListPath::from_str("/users").unwrap();
+    let path: UsersListPath = "/users".parse().unwrap();
     assert_eq!(path, UsersListPath {});
 }
 
 #[test]
 fn trailing_slash() {
-    let path = UsersListPath::from_str("/users/");
-    assert!(path.is_none());
+    let path: Result<UsersListPath, _> = "/users/".parse();
+    assert!(path.is_err()); // TODO - err
 }
 
 #[test]
 fn no_leading_slash() {
-    let path = UsersListPath::from_str("users");
-    assert!(path.is_none());
+    let path: Result<UsersListPath, _> = "users".parse();
+    assert!(path.is_err());
 }
 
 #[derive(AppPath, Debug, PartialEq)]
@@ -31,20 +31,20 @@ struct UserDetailPath {
 
 #[test]
 fn one_param() {
-    let path = UserDetailPath::from_str("/users/642151").unwrap();
+    let path: UserDetailPath = "/users/642151".parse().unwrap();
     assert_eq!(path, UserDetailPath { user_id: 642151 });
 }
 
 #[test]
 fn invalid_param_type() {
-    let path = UserDetailPath::from_str("/users/not_a_u64");
-    assert!(path.is_none());
+    let path: Result<UserDetailPath, _> = "/users/not_a_u64".parse();
+    assert!(path.is_err());
 }
 
 #[test]
 fn one_param_no_leading_slash() {
-    let path = UserDetailPath::from_str("users/4216");
-    assert!(path.is_none());
+    let path: Result<UserDetailPath, _> = "users/4216".parse();
+    assert!(path.is_err());
 }
 
 #[derive(AppPath, Debug, PartialEq)]
@@ -56,7 +56,7 @@ struct UserFriendDetailPath {
 
 #[test]
 fn two_params() {
-    let path = UserFriendDetailPath::from_str("/users/612451/friends/steve").unwrap();
+    let path: UserFriendDetailPath = "/users/612451/friends/steve".parse().unwrap();
     assert_eq!(
         path,
         UserFriendDetailPath {
@@ -68,7 +68,7 @@ fn two_params() {
 
 #[test]
 fn two_params_utf8_1() {
-    let path = UserFriendDetailPath::from_str("/users/612451/friends/田中").unwrap();
+    let path: UserFriendDetailPath = "/users/612451/friends/田中".parse().unwrap();
     assert_eq!(
         path,
         UserFriendDetailPath {
@@ -80,7 +80,7 @@ fn two_params_utf8_1() {
 
 #[test]
 fn two_params_utf8_2() {
-    let path = UserFriendDetailPath::from_str("/users/612451/friends/🌮🌮🌮").unwrap();
+    let path: UserFriendDetailPath = "/users/612451/friends/🌮🌮🌮".parse().unwrap();
     assert_eq!(
         path,
         UserFriendDetailPath {
@@ -109,13 +109,13 @@ struct UsersListWithQuery {
 
 #[test]
 fn no_params_simple_query_required() {
-    let path = UsersListWithQuery::from_str("/users");
-    assert!(path.is_none());
+    let path: Result<UsersListWithQuery, _> = "/users".parse();
+    assert!(path.is_err());
 }
 
 #[test]
 fn no_params_simple_query() {
-    let path = UsersListWithQuery::from_str("/users?friends_only=true").unwrap();
+    let path: UsersListWithQuery = "/users?friends_only=true".parse().unwrap();
     assert_eq!(
         path,
         UsersListWithQuery {
@@ -133,7 +133,7 @@ fn no_params_simple_query() {
 
 #[test]
 fn no_params_simple_query_missing_bool_field() {
-    let path = UsersListWithQuery::from_str("/users?").unwrap();
+    let path: UsersListWithQuery = "/users?".parse().unwrap();
     assert_eq!(
         path,
         UsersListWithQuery {
@@ -151,16 +151,13 @@ fn no_params_simple_query_missing_bool_field() {
 
 #[test]
 fn no_params_simple_query_invalid_type() {
-    let path = UsersListWithQuery::from_str("/users?offset=test");
-    assert!(path.is_none());
+    let path: Result<UsersListWithQuery, _> = "/users?offset=test".parse();
+    assert!(path.is_err());
 }
 
 #[test]
 fn no_params_simple_query_all_defined() {
-    let path = UsersListWithQuery::from_str(
-        "/users?offset=10&limit=20&friends_only=false&keyword=some_keyword",
-    )
-    .unwrap();
+    let path: UsersListWithQuery = "/users?offset=10&limit=20&friends_only=false&keyword=some_keyword".parse().unwrap();
     assert_eq!(
         path,
         UsersListWithQuery {
@@ -178,7 +175,7 @@ fn no_params_simple_query_all_defined() {
 
 #[test]
 fn no_params_simple_query_url_decoding() {
-    let path = UsersListWithQuery::from_str("/users?keyword=some%20keyword%20with%20ampersand-question-equals-stuff%26%3F%3d%3a%3b%40%23%25%5e%5b%5d%7b%7D%60%22%3c%3e%E6%97%A5%E6%9C%AC%E8%AA%9E").unwrap();
+    let path: UsersListWithQuery = "/users?keyword=some%20keyword%20with%20ampersand-question-equals-stuff%26%3F%3d%3a%3b%40%23%25%5e%5b%5d%7b%7D%60%22%3c%3e%E6%97%A5%E6%9C%AC%E8%AA%9E".parse().unwrap();
     assert_eq!(
         path,
         UsersListWithQuery {
@@ -220,7 +217,7 @@ struct UserDetailExtraPath {
 
 #[test]
 fn one_param_optional_query_missing() {
-    let path = UserDetailExtraPath::from_str("/users/8").unwrap();
+    let path: UserDetailExtraPath = "/users/8".parse().unwrap();
     assert_eq!(
         path,
         UserDetailExtraPath {
@@ -232,7 +229,7 @@ fn one_param_optional_query_missing() {
 
 #[test]
 fn one_param_optional_query_present() {
-    let path = UserDetailExtraPath::from_str("/users/8?limit=55").unwrap();
+    let path: UserDetailExtraPath = "/users/8?limit=55".parse().unwrap();
     assert_eq!(
         path,
         UserDetailExtraPath {
@@ -249,8 +246,8 @@ fn one_param_optional_query_present() {
 
 #[test]
 fn one_param_num_out_of_range() {
-    let path = UserDetailExtraPath::from_str("/users/256");
-    assert!(path.is_none());
+    let path: Result<UserDetailExtraPath, _> = "/users/256".parse();
+    assert!(path.is_err());
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -288,7 +285,7 @@ struct ExpiredSubmissionsPath {
 
 #[test]
 fn test_no_query() {
-    let path = ExpiredSubmissionsPath::from_str("/p/43/exams/10/submissions_expired").unwrap();
+    let path: ExpiredSubmissionsPath = "/p/43/exams/10/submissions_expired".parse().unwrap();
     assert_eq!(
         path,
         ExpiredSubmissionsPath {
@@ -302,7 +299,7 @@ fn test_no_query() {
 
 #[test]
 fn test_only_question_mark() {
-    let path = ExpiredSubmissionsPath::from_str("/p/43/exams/10/submissions_expired?").unwrap();
+    let path: ExpiredSubmissionsPath = "/p/43/exams/10/submissions_expired?".parse().unwrap();
     assert_eq!(
         path,
         ExpiredSubmissionsPath {
