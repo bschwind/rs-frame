@@ -164,21 +164,26 @@ fn main() {
         ExpiredSubmissionsPath::path_pattern()
     );
 
-    let app_path_string = "/p/43/exams/10/submissions_expired";
-    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired".parse().unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let app_path_string = "/p/22/exams/10/submissions_expired?limit=20&keyword=test";
-    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/22/exams/10/submissions_expired?limit=20&keyword=test"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let app_path_string = "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name";
-    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
-    let app_path_string =
-        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc";
-    let expired_path = ExpiredSubmissionsPath::from_str(app_path_string);
+    let expired_path: ExpiredSubmissionsPath =
+        "/p/43/exams/10/submissions_expired?limit=20&offset=10&column=users.name&direction=asc"
+            .parse()
+            .unwrap();
     println!("expired_path: {:#?}", expired_path);
 
     // let start = std::time::Instant::now();
@@ -197,11 +202,12 @@ fn main() {
 
     // println!("expired_path URL: {}", expired_path.unwrap().to_string());
 
-    let routes: Vec<Box<dyn AppPath>> = vec![Box::new(expired_path.unwrap())];
+    // TODO - object safety
+    // let routes: Vec<Box<dyn AppPath>> = vec![Box::new(expired_path.unwrap())];
 
-    for route in routes {
-        println!("Route: {}", route);
-    }
+    // for route in routes {
+    //     println!("Route: {}", route);
+    // }
 
     // let controllers: Vec<Box<dyn Controller>> = vec!(Box::new(EnvironmentDetailController::default()), Box::new(HomeController));
 

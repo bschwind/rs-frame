@@ -15,11 +15,16 @@ pub use serde_qs;
 
 pub use rs_frame_macros::AppPath;
 
-pub trait AppPath: std::fmt::Display {
+#[derive(Debug)]
+pub enum PathParseErr {
+    NoMatches,
+    NoQueryString,
+    ParamParseErr(String),
+    QueryParseErr(String),
+}
+
+pub trait AppPath: std::fmt::Display + std::str::FromStr {
     fn path_pattern() -> String
-    where
-        Self: Sized;
-    fn from_str(app_path: &str) -> Option<Self>
     where
         Self: Sized;
     fn query_string(&self) -> Option<String>;

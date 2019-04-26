@@ -1,4 +1,4 @@
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
@@ -239,7 +239,9 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
         let f_ident_str = f_ident.to_string();
 
         quote! {
-            #f_ident: captures[#f_ident_str].parse().ok()?
+            #f_ident: captures[#f_ident_str].parse().map_err(|e| {
+                PathParseErr::ParamParseErr(std::string::ToString::to_string(&e))
+            })?
         }
     });
 
@@ -253,7 +255,7 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
             }
         } else {
             quote! {
-                #f_ident: qs::from_str(query_string?).ok()?
+                #f_ident: qs::from_str(query_string.ok_or(PathParseErr::NoQueryString)?).map_err(|e| PathParseErr::QueryParseErr(e.description().to_string()))?
             }
         }
     });
@@ -337,31 +339,6 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                 #path_regex_str.to_string()
             }
 
-            fn from_str(app_path: &str) -> Option<Self> {
-                use rs_frame::serde_qs as qs;
-
-                rs_frame::lazy_static! {
-                    static ref PATH_REGEX: rs_frame::Regex = rs_frame::Regex::new(#path_regex_str).expect("Failed to compile regex");
-                }
-
-                let question_pos = app_path.find('?');
-                let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
-
-                let captures = (*PATH_REGEX).captures(just_path)?;
-
-                let query_string = question_pos.map(|question_pos| {
-                    let mut query_string = &app_path[question_pos..];
-
-                    if query_string.starts_with('?') {
-                        query_string = &query_string[1..];
-                    }
-
-                    query_string
-                });
-
-                Some(#struct_constructor)
-            }
-
             fn query_string(&self) -> Option<String> {
                 use rs_frame::serde_qs as qs;
 
@@ -397,6 +374,36 @@ pub fn app_path_derive(input: TokenStream) -> TokenStream {
                         #format_args
                     )
                 }
+            }
+        }
+
+        impl #impl_generics std::str::FromStr for #name #ty_generics #where_clause {
+            type Err = rs_frame::PathParseErr;
+
+            fn from_str(app_path: &str) -> Result<Self, Self::Err> {
+                use rs_frame::serde_qs as qs;
+                use rs_frame::PathParseErr;
+
+                rs_frame::lazy_static! {
+                    static ref PATH_REGEX: rs_frame::Regex = rs_frame::Regex::new(#path_regex_str).expect("Failed to compile regex");
+                }
+
+                let question_pos = app_path.find('?');
+                let just_path = &app_path[..(question_pos.unwrap_or_else(|| app_path.len()))];
+
+                let captures = (*PATH_REGEX).captures(just_path).ok_or(PathParseErr::NoMatches)?;
+
+                let query_string = question_pos.map(|question_pos| {
+                    let mut query_string = &app_path[question_pos..];
+
+                    if query_string.starts_with('?') {
+                        query_string = &query_string[1..];
+                    }
+
+                    query_string
+                });
+
+                Ok(#struct_constructor)
             }
         }
     };
