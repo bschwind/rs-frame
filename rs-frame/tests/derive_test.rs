@@ -274,6 +274,257 @@ fn one_param_num_out_of_range() {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Building {
+    name: String,
+    number: Option<u32>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Country {
+    CountryA,
+    CountryB,
+    CountryC,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Address {
+    street_name: Option<String>,
+    apt_number: Option<u32>,
+    country: Option<Country>,
+    building: Option<Building>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct ParentQuery {
+    // Not sure why you'd have an address here, but I had to think of
+    // _something_ nested
+    address: Option<Address>,
+}
+
+#[derive(AppPath, Debug, PartialEq)]
+#[path("/users/:user_id")]
+struct UserDetailNestedQueryPath {
+    user_id: u32,
+
+    #[query]
+    query: Option<ParentQuery>,
+}
+
+#[test]
+fn nested_query_1() {
+    let path: UserDetailNestedQueryPath = "/users/1024?address[apt_number]=101".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailNestedQueryPath {
+            user_id: 1024,
+            query: Some(ParentQuery {
+                address: Some(Address {
+                    street_name: None,
+                    apt_number: Some(101),
+                    country: None,
+                    building: None,
+                })
+            })
+        }
+    );
+}
+
+#[test]
+fn nested_query_2() {
+    let path: UserDetailNestedQueryPath =
+        "/users/1024?address[apt_number]=101&address[country]=country_b"
+            .parse()
+            .unwrap();
+    assert_eq!(
+        path,
+        UserDetailNestedQueryPath {
+            user_id: 1024,
+            query: Some(ParentQuery {
+                address: Some(Address {
+                    street_name: None,
+                    apt_number: Some(101),
+                    country: Some(Country::CountryB),
+                    building: None,
+                })
+            })
+        }
+    );
+}
+
+#[test]
+fn nested_query_3() {
+    let path: UserDetailNestedQueryPath = "/users/1024?address[apt_number]=101&address[country]=country_b&address[building][name]=Cool%20Building".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailNestedQueryPath {
+            user_id: 1024,
+            query: Some(ParentQuery {
+                address: Some(Address {
+                    street_name: None,
+                    apt_number: Some(101),
+                    country: Some(Country::CountryB),
+                    building: Some(Building {
+                        name: "Cool Building".to_string(),
+                        number: None,
+                    })
+                })
+            })
+        }
+    );
+}
+
+#[test]
+fn nested_query_4() {
+    let path: UserDetailNestedQueryPath = "/users/1024?address[apt_number]=101&address[country]=country_b&address[building][name]=Cool%20Building&address[building][number]=not_number".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailNestedQueryPath {
+            user_id: 1024,
+            query: None,
+        }
+    );
+}
+
+#[test]
+fn nested_query_5() {
+    let path: UserDetailNestedQueryPath = "/users/1024?address[apt_number]=101&address[country]=country_b&address[building][name]=Cool%20Building&address[building][number]=9000".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailNestedQueryPath {
+            user_id: 1024,
+            query: Some(ParentQuery {
+                address: Some(Address {
+                    street_name: None,
+                    apt_number: Some(101),
+                    country: Some(Country::CountryB),
+                    building: Some(Building {
+                        name: "Cool Building".to_string(),
+                        number: Some(9000),
+                    })
+                })
+            })
+        }
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct VecQuery {
+    friend_ids: Vec<u32>,
+}
+
+#[derive(AppPath, Debug, PartialEq)]
+#[path("/users/:user_id")]
+struct UserDetailVecQueryPath {
+    user_id: u32,
+
+    #[query]
+    query: Option<VecQuery>,
+}
+
+#[test]
+fn vec_query_1() {
+    let path: UserDetailVecQueryPath = "/users/1024?".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: None,
+        }
+    );
+}
+
+#[test]
+fn vec_query_2() {
+    let path: UserDetailVecQueryPath = "/users/1024?friend_ids".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: None,
+        }
+    );
+}
+
+#[test]
+fn vec_query_3() {
+    let path: UserDetailVecQueryPath = "/users/1024?friend_ids[]=1".parse().unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: Some(VecQuery {
+                friend_ids: vec![1],
+            }),
+        }
+    );
+}
+
+#[test]
+fn vec_query_4() {
+    let path: UserDetailVecQueryPath = "/users/1024?friend_ids[]=1&friend_ids[]=20"
+        .parse()
+        .unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: Some(VecQuery {
+                friend_ids: vec![1, 20],
+            }),
+        }
+    );
+}
+
+#[test]
+fn vec_query_5() {
+    let path: UserDetailVecQueryPath = "/users/1024?friend_ids[]=1&friend_ids[]=20&friend_ids=33"
+        .parse()
+        .unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: None,
+        }
+    );
+}
+
+#[test]
+fn vec_query_6() {
+    let path: UserDetailVecQueryPath =
+        "/users/1024?friend_ids[0]=1&friend_ids[1]=20&friend_ids[2]=33"
+            .parse()
+            .unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: Some(VecQuery {
+                friend_ids: vec![1, 20, 33],
+            }),
+        }
+    );
+}
+
+#[test]
+fn vec_query_7() {
+    let path: UserDetailVecQueryPath =
+        "/users/1024?friend_ids[1]=20&friend_ids[2]=33&friend_ids[0]=1"
+            .parse()
+            .unwrap();
+    assert_eq!(
+        path,
+        UserDetailVecQueryPath {
+            user_id: 1024,
+            query: Some(VecQuery {
+                friend_ids: vec![1, 20, 33],
+            }),
+        }
+    );
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
