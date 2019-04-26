@@ -1,3 +1,4 @@
 /target
+/rs-frame/target
 **/*.rs.bk
 Cargo.lock

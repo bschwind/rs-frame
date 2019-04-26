@@ -2,5 +2,6 @@
 
 members = [
     "rs-frame",
+    "rs-frame-macros",
     "coach",
 ]
